@@ -1,0 +1,25 @@
+{
+  "name": "cross-agent-trajectory",
+  "version": "1.0.0",
+  "description": "Multi-host, out-of-band forensics & trajectory inspection engine for autonomous AI coding agents",
+  "type": "module",
+  "bin": {
+    "cross-agent-trajectory": "./scripts/audit.mjs"
+  },
+  "scripts": {
+    "audit": "node scripts/audit.mjs --latest",
+    "test": "node scripts/audit.mjs --latest --tail 5"
+  },
+  "keywords": [
+    "ai-agents",
+    "trajectory-forensics",
+    "multi-agent",
+    "antigravity",
+    "claude-code",
+    "codex",
+    "vibe-coding",
+    "agent-governance"
+  ],
+  "author": "Gabriel Toledo (https://github.com/Gabrielrtads)",
+  "license": "MIT"
+}
