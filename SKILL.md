@@ -1,18 +1,18 @@
 ---
-name: cross-agent-trajectory
-description: Multi-host, out-of-band forensics & trajectory inspection engine for autonomous AI coding agents (Antigravity, Claude Code, OpenAI Codex). Audits thinking, tool calls, silent failures, and file mutations across heterogeneous machines (Linux VPS, macOS, Windows).
+name: agent-log
+description: Like git log, but for AI coding agents. Inspect raw trajectory transcripts, thinking tokens, and silent failures across heterogeneous machines (Windows ↔ Linux VPS).
 category: multi-agent
-tags: [trajectory-auditing, forensics, multi-agent, cross-host, agent-governance]
+tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governance]
 ---
 
-# 🕵️ Cross-Agent Trajectory Auditor (`cross-agent-trajectory`)
+# 📜 `agent-log`
 
-> **Multi-host, out-of-band forensics & trajectory inspection engine for autonomous AI coding agents.**  
+> **Like `git log`, but for AI coding agents.**  
 > Never rely on an agent's self-reported success. Audit raw chronological trajectory logs (`transcript.jsonl`) across machines to catch silent failures, hallucinated tool outputs, and unauthorized file mutations.
 
 ---
 
-## 🧭 Why Trajectory Forensics?
+## 🧭 Why `agent-log`?
 
 When orchestrating autonomous agents across multiple nodes (e.g. Local Workstation ↔ Cloud VPS ↔ Edge device), conversational validation fails:
 
@@ -20,16 +20,7 @@ When orchestrating autonomous agents across multiple nodes (e.g. Local Workstati
 - **Hallucinated State:** An LLM may assume a file exists or an API call succeeded without checking real stderr/stdout.
 - **Scope Drift:** Background agents modifying files outside their assigned worktree.
 
-**Cross-Agent Trajectory Forensics** operates out-of-band: an auditing agent bypasses the target agent's conversational interface and inspects its raw execution ledger directly.
-
----
-
-## 🛠️ The 4 Pillars of Agent Trajectory Audit
-
-1. **Scope Integrity:** Verifies all `write_file`, `edit_file`, and shell commands operated within the authorized directory.
-2. **Silent Failure Detection:** Scans all tool executions for non-zero exit codes, unhandled exceptions, and stderr warnings hidden by polite LLM responses.
-3. **Reasoning Verification (`thinking`):** Inspects raw, unedited chain-of-thought tokens prior to tool execution to detect conflicting assumptions.
-4. **Credential Isolation:** Ensures tokens, OAuth secrets, and private keys were not leaked into transcript logs.
+`agent-log` operates out-of-band: an auditing agent bypasses the target agent's conversational interface and inspects its raw execution ledger directly.
 
 ---
 

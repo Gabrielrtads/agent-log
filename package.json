@@ -1,16 +1,17 @@
 {
-  "name": "cross-agent-trajectory",
+  "name": "agent-log",
   "version": "1.0.0",
-  "description": "Multi-host, out-of-band forensics & trajectory inspection engine for autonomous AI coding agents",
+  "description": "Like git log, but for AI coding agents. Inspect raw trajectory transcripts, thinking tokens, and silent failures across machines.",
   "type": "module",
   "bin": {
-    "cross-agent-trajectory": "./scripts/audit.mjs"
+    "agent-log": "./scripts/audit.mjs"
   },
   "scripts": {
-    "audit": "node scripts/audit.mjs --latest",
+    "log": "node scripts/audit.mjs --latest",
     "test": "node scripts/audit.mjs --latest --tail 5"
   },
   "keywords": [
+    "agent-log",
     "ai-agents",
     "trajectory-forensics",
     "multi-agent",
