@@ -19,6 +19,39 @@ When orchestrating autonomous coding agents across different operating systems (
 An agent on Windows has no idea what the agent on Linux just changed, unless it actively inspects the physical execution trail:
 
 ```mermaid
+flowchart TD
+    subgraph Windows["💻 Local Node (Windows 11) - Studio & UI"]
+        AgentLocal["🤖 Local Agent (Claude / Codex / Gemini)"]
+        AgentLogCLI["📜 CLI agent-log (audit.mjs)"]
+        AgentLocal -->|Needs to verify state| AgentLogCLI
+    end
+
+    subgraph Tunnel["🛡️ Secure Private Network (Tailscale SSH)"]
+        direction LR
+        SSHOut["SSH Out-of-Band (Port 22)"]
+    end
+
+    subgraph VPS["🐧 Remote Node (Linux VPS) - 24/7 Engine"]
+        AgentVPS["🤖 Remote Agent (Workers / Docker)"]
+        TerminalOS["⚙️ Shell / Docker / Postgres"]
+        SinkLog[("🚰 THE SINK:\ntranscript.jsonl\n(thinking + exit_codes + mutations)")]
+        
+        AgentVPS -->|Executes actions silently| TerminalOS
+        TerminalOS -->|Appends raw physical log| SinkLog
+    end
+
+    AgentLogCLI ==>|Secure tunnel without opening chat| SSHOut
+    SSHOut ==>|Dissects real execution ledger| SinkLog
+    SinkLog -.->|Returns clean forensics report| AgentLogCLI
+```
+
+---
+
+## ⚡ The Silent Failure Trap
+
+Conversational agents are conditioned to be polite and cooperative, often rationalizing or obscuring command failures in their textual responses:
+
+```mermaid
 sequenceDiagram
     participant User as Developer / Agent A (Windows)
     participant Agent as Autonomous Agent B (Linux VPS)
@@ -30,18 +63,52 @@ sequenceDiagram
     Agent-->>User: "Service restarted successfully!" ⚠️ (HALLUCINATED SUCCESS)
 ```
 
-Conversational agents are polite by design. They often obscure or rationalize shell errors in their conversational replies. 
-
 **`agent-log`** bypasses the polite conversational layer and reads the raw, unedited chronological `.jsonl` transcript directly from disk or over SSH.
 
 ---
 
-## 🛠️ What `agent-log` Inspects
+## 🔬 Anatomia da Auditoria (What `agent-log` Inspects)
 
-1. **Silent Failure Detection:** Automatically catches commands with non-zero exit codes (`exit_code != 0`), unhandled promise rejections, and stderr errors hidden by the LLM.
-2. **Thinking Token Forensics:** Inspects raw `thinking` tokens before tools were called to understand the agent's real hypotheses.
-3. **Physical File Mutation Ledger:** Lists every file created, modified, or deleted across the session.
-4. **Cross-Host Inspection via SSH:** Connects to any remote machine or VPS in one command without installing software on the target.
+```mermaid
+graph LR
+    JSONL["📜 transcript.jsonl\n(Raw Execution Ledger)"]
+
+    JSONL --> P1["🧠 1. Unedited Thinking\n(Real intent before conversational smoothing)"]
+    JSONL --> P2["🔧 2. Tool Calls\n(Exact commands dispatched to the shell)"]
+    JSONL --> P3["🚨 3. Real Exit Code\n(Detects exit != 0 concealed in chat)"]
+    JSONL --> P4["📂 4. Mutation Ledger\n(Files created, edited, or destroyed)"]
+
+    P1 & P2 & P3 & P4 --> Report["📊 Final Forensics Report:\nZero Hallucination of Success"]
+```
+
+---
+
+## ⚖️ Blind Faith vs. Zero-Trust Verification
+
+```mermaid
+flowchart LR
+    subgraph Bad["❌ Blind Faith (Chat-Only)"]
+        A1["Agent A"] -->|Ask in chat: 'Did deploy pass?'| B1["Agent B"]
+        B1 -->|Polite reply: 'Yes, everything works!'| A1
+        A1 --> Boom["💥 Production Outage\n(Command failed silently)"]
+    end
+
+    subgraph Good["✅ Zero-Trust with agent-log"]
+        A2["Agent A"] -->|Runs agent-log --host vps| Log["📜 transcript.jsonl"]
+        Log -->|Physical proof: exit_code = 0| A2
+        A2 --> Win["🚀 Deployment validated with evidence"]
+    end
+```
+
+---
+
+## 🛠️ Key Features
+
+- **Zero-Dependency Core:** Pure Node.js ESM. Runs instantly on any machine with zero npm installs.
+- **Cross-Host Inspection via SSH:** Connects to any remote VPS or machine in one command without installing software on the target.
+- **Silent Failure Detection:** Automatically identifies non-zero command exits, unhandled errors, and masked failures.
+- **Thinking Token Forensics:** Inspects unedited chain-of-thought (`thinking`) logs to verify true agent intent before tool execution.
+- **File Mutation Ledger:** Tracks every file created, modified, or deleted across the session.
 
 ---
 
