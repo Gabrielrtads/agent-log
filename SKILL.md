@@ -1,14 +1,22 @@
 ---
 name: agent-log
-description: Like git log, but for AI coding agents. Inspect raw trajectory transcripts, thinking tokens, and silent failures across heterogeneous machines (Windows ↔ Linux VPS).
+description: Like git log + a Metal Detector for AI coding agents. Inspects raw transcripts, unedited thinking tokens, silent command failures, and searches keywords across sessions and machines (Windows ↔ Linux VPS).
 category: multi-agent
-tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governance]
+tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governance, search, metal-detector]
 ---
 
 # 📜 `agent-log`
 
-> **Like `git log`, but for AI coding agents.**  
-> Never rely on an agent's self-reported success. Audit raw chronological trajectory logs (`transcript.jsonl`) across machines to catch silent failures, hallucinated tool outputs, and unauthorized file mutations.
+> **Like `git log` + a Metal Detector, but for AI coding agents.**  
+> Never rely on an agent's self-reported success. Audit raw chronological trajectory logs (`transcript.jsonl`) across machines to catch silent failures, hallucinated tool outputs, unauthorized mutations, or find needles in gigabytes of log hay.
+
+---
+
+## ⚡ When to Activate This Skill
+- Whenever the user mentions `/agent-log`, `agent-log`, `auditar agente`, `verificar logs`, `buscar no histórico`, `detector de metais`, `o que o agente fez?`, `qual foi o erro?`, or `procurar comando`.
+- When diagnosing an unexpected command failure, silent exit code != 0, or unhandled exception.
+- When an agent on one machine (e.g. Windows) needs out-of-band proof of what an agent on another machine (e.g. Linux VPS) executed.
+- When you need to retrieve past parameters, flags, or decisions without loading megabytes of logs into the active context window.
 
 ---
 
@@ -16,29 +24,36 @@ tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governanc
 
 When orchestrating autonomous agents across multiple nodes (e.g. Local Workstation ↔ Cloud VPS ↔ Edge device), conversational validation fails:
 
-- **The Silent Failure Trap:** An agent claims: *"Database migrated and service deployed successfully."* But underneath, the shell command exited with `code 1`, leaving production in an inconsistent state.
-- **Hallucinated State:** An LLM may assume a file exists or an API call succeeded without checking real stderr/stdout.
-- **Scope Drift:** Background agents modifying files outside their assigned worktree.
-
-`agent-log` operates out-of-band: an auditing agent bypasses the target agent's conversational interface and inspects its raw execution ledger directly.
+- **The Silent Failure Trap:** An agent claims: *"Database migrated and service deployed successfully."* But underneath, the shell command exited with `code 1`, leaving production broken.
+- **The Needle in the Haystack:** Looking for that one FFmpeg flag or API response from 3 days ago among megabytes of raw `.jsonl` files.
+- **Context Window Protection:** Ingesting raw logs into the prompt causes memory bloat, high token costs, and reasoning degradation. `agent-log` runs outside the LLM at 0 token cost and returns only the physical proof.
 
 ---
 
-## 🚀 Quick Start & CLI Usage
+## 🚀 Quick Start & Commands
 
-### 1. Audit Local Agent Trajectory
+### 1. The Metal Detector (Search Across Sessions)
 ```bash
-# Automatically detects the most recent agent session (Antigravity, Claude Code, etc.)
-node scripts/audit.mjs --latest
+# Search keyword in the latest session
+node scripts/audit.mjs --search "prisma migrate"
 
-# Audit a specific session transcript
-node scripts/audit.mjs --file /path/to/transcript.jsonl --tail 20 --verbose
+# Search keyword across ALL local agent harnesses (Gemini, Claude, Codex)
+node scripts/audit.mjs --search "ffmpeg" --all
 ```
 
-### 2. Audit Remote Agent via SSH (Cross-Host)
+### 2. Audit Trajectory & Silent Failures
 ```bash
-# Audits the active agent on a remote VPS or machine
-node scripts/audit.mjs --host 192.168.1.100 --user dev --tail 15
+# Automatically detects the most recent agent session
+node scripts/audit.mjs --latest
+
+# View the last 20 steps with full unedited thinking output
+node scripts/audit.mjs --latest --tail 20 --verbose
+```
+
+### 3. Remote Audit via SSH (Cross-Host)
+```bash
+# Audits the active agent on a remote VPS or server
+node scripts/audit.mjs --host 100.98.233.126 --user ubuntu --tail 15
 ```
 
 ---

@@ -1,9 +1,13 @@
 # 📜 `agent-log`
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/Gabrielrtads/agent-log?style=social)](https://github.com/Gabrielrtads/agent-log/stargazers)
+[![Install via Skills.sh](https://img.shields.io/badge/skills.sh-agent--log-blue.svg)](https://skills.sh)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![AI Agents](https://img.shields.io/badge/AI%20Agents-Antigravity%20%7C%20Claude%20%7C%20Codex-blue.svg)](https://github.com/Gabrielrtads)
 [![Methodology](https://img.shields.io/badge/Methodology-100%25_Vibe_Coding-orange.svg)](https://github.com/Gabrielrtads)
+
+> ⭐ **If this tool saved you from a silent failure or helped you find a needle in the log hay, please star this repository! It helps more developers discover the project.**
 
 > **Like `git log` + a Metal Detector, but for AI coding agents.**  
 > *Find the needles hidden inside gigabytes of agent logs, inspect unedited thinking tokens, expose silent command failures, and audit trajectories across heterogeneous machines (Windows ↔ Linux VPS) and competing AI harnesses (Google, Anthropic, OpenAI).*
@@ -141,6 +145,22 @@ When coordinating multiple autonomous agents (e.g. Swarms or Kage-Bunshin):
 - **Silent Failure Detection:** Automatically identifies non-zero command exits, unhandled errors, and masked failures.
 - **Thinking Token Forensics:** Inspects unedited chain-of-thought (`thinking`) logs to verify true agent intent before tool execution.
 - **File Mutation Ledger:** Tracks every file created, modified, or deleted across the session.
+
+---
+
+## ⚡ Quick Install
+
+### Via `skills.sh` (Recommended for AI Agents):
+```bash
+npx skills add Gabrielrtads/agent-log
+```
+
+### Global CLI:
+```bash
+npm install -g agent-log
+# Or execute instantly via npx:
+npx agent-log --search "keyword"
+```
 
 ---
 
