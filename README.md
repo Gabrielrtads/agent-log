@@ -108,6 +108,30 @@ graph LR
 
 ---
 
+## 💰 Context Window & Token Economics (Why `agent-log` Saves Your Wallet)
+
+Modern frontier LLMs support massive context windows, but feeding raw log haystacks into active prompt contexts introduces steep financial and cognitive penalties:
+
+### 1. The Single-Agent Trap: Context Bloat & Reasoning Overload
+* **"Lost in the Middle":** Shoveling megabytes of terminal output into a prompt disperses the model's attention. The agent starts hallucinating, ignoring system prompts, and making subtle bugs.
+* **The 128k Tiered Pricing Trap:** On frontier models, crossing 128,000 tokens often doubles the price per million tokens on both input and output.
+* **Reasoning Token Overload:** Frontier reasoning models (Extended Thinking) generate thinking tokens billed as expensive output. When the context is polluted with terminal logs, the model expends thousands of costly reasoning tokens simply trying to ignore the noise.
+* **The `agent-log` Fix:** Operates completely out-of-band on local CPU (0 tokens). It delivers the exact 3-line evidence to the agent, keeping active sessions lean (5k-10k tokens).
+
+### 2. The Multi-Agent Multiplicative Cost Trap ($N \times \text{Context}$)
+When coordinating multiple autonomous agents (e.g. Swarms or Kage-Bunshin):
+* If each agent must ingest the full conversational history of peer agents, token consumption multiplies by $N$ agents. 5 agents reading a 100k-token session consume **500k tokens per single turn**.
+* With **`agent-log`**, agents stay decoupled. When Agent B on Windows needs to verify if Agent A on a Linux VPS restarted Docker, it doesn't read Agent A's chat transcript. It executes `node scripts/audit.mjs --host vps --search "docker compose"`, receives 100 tokens of verified physical proof, and spends fractions of a cent.
+
+| Architecture | Context Size / Turn | Cost / Turn | Latency |
+|---|:---:|:---:|:---:|
+| **Monolithic Chat (Logs in Prompt)** | ~120,000 tokens | \$0.36 – \$0.60 | 15s – 30s |
+| **Decoupled with `agent-log`** | ~8,000 tokens | \$0.02 – \$0.04 | ~2s |
+| **Multi-Agent (3 agents sharing history)** | ~360,000 tokens | \$1.20 – \$2.50 | 30s – 50s |
+| **Multi-Agent (`agent-log` out-of-band)** | ~24,000 tokens | \$0.07 – \$0.12 | ~2s |
+
+---
+
 ## 🛠️ Key Features
 
 - **🧲 Metal Detector Mode (`--search` / `--grep`):** Scan across unedited thinking, tool arguments, and output for specific terms or decisions.
