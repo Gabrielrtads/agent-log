@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * Cross-Agent Trajectory Auditor
- * Multi-host, out-of-band forensics & trajectory inspection engine for AI coding agents.
+ * Cross-Agent Trajectory Auditor & Forensics Engine (agent-log)
+ * Multi-host, cross-harness trajectory inspection & forensics for AI coding agents.
  * 
- * Supports local and remote (.jsonl) session transcripts (Antigravity, Claude Code, Codex).
+ * Supports local and remote (.jsonl) session transcripts (Antigravity/Gemini, Claude Code, Codex).
+ * 
+ * Features:
+ *   - "Needle in a Haystack" Metal Detector: search terms, tool arguments, or thinking tokens across sessions.
+ *   - Silent Failure Detection: exposes hidden exit != 0 failures concealed behind polite conversational chat.
+ *   - Unedited Thinking Forensics: reads raw reasoning before conversational smoothing.
+ *   - Cross-Vendor & Multi-Host: Windows workstation ↔ Linux VPS via SSH.
  * 
  * Usage:
  *   node scripts/audit.mjs --latest
+ *   node scripts/audit.mjs --search "ffmpeg"
+ *   node scripts/audit.mjs --grep "prisma" --all
  *   node scripts/audit.mjs --file <path-to-transcript.jsonl>
- *   node scripts/audit.mjs --host <remote-ip> [--user <username>] [--runtime <antigravity|claude>]
+ *   node scripts/audit.mjs --host <remote-ip> [--user <username>] [--search <term>]
  */
 
 import fs from 'fs';
@@ -29,16 +37,27 @@ const hasFlag = (flag) => args.includes(flag);
 
 function printHelp() {
   console.log(`
-Cross-Agent Trajectory Auditor (Forensics & Inspection)
+📜 agent-log: Cross-Agent Trajectory Auditor & Metal Detector
 
-Options:
+Usage:
+  node scripts/audit.mjs [options]
+
+Core Options:
   --latest               Inspect the most recent local trajectory transcript.
+  --search, --grep <str> Search keyword across unedited thinking, tool arguments, and output (Metal Detector mode).
+  --all                  In search mode, scan across all known local AI agent workspaces (Gemini, Claude, Codex).
   --file <path>          Path to a specific transcript.jsonl file.
   --host <ip/hostname>   Remote host to inspect via SSH.
   --user <user>          SSH username (default: root).
   --tail <num>           Number of steps to display (default: 10).
   --verbose              Display full thinking and output contents.
   --help                 Show this help message.
+
+Examples:
+  node scripts/audit.mjs --latest
+  node scripts/audit.mjs --search "asaas"
+  node scripts/audit.mjs --grep "exit code 1" --all
+  node scripts/audit.mjs --host 100.98.233.126 --tail 15
 `);
 }
 
@@ -49,6 +68,8 @@ if (hasFlag('--help')) {
 
 const tailCount = parseInt(getArg('--tail', '10'), 10);
 const isVerbose = hasFlag('--verbose');
+const searchQuery = getArg('--search') || getArg('--grep');
+const searchAll = hasFlag('--all');
 
 function parseTranscriptLines(lines) {
   const steps = [];
@@ -152,17 +173,48 @@ function renderReport(steps, sourceLabel) {
   console.log(`\n============================================================\n`);
 }
 
-function findLocalTranscript() {
+function searchInSteps(steps, query, sourceLabel) {
+  const needle = query.toLowerCase();
+  const matches = [];
+
+  for (let idx = 0; idx < steps.length; idx++) {
+    const s = steps[idx];
+    const matchDetails = [];
+
+    if (s.thinking && s.thinking.toLowerCase().includes(needle)) {
+      matchDetails.push({ field: 'thinking', text: s.thinking });
+    }
+    if (s.content && typeof s.content === 'string' && s.content.toLowerCase().includes(needle)) {
+      matchDetails.push({ field: 'content', text: s.content });
+    }
+    if (s.tool_calls && Array.isArray(s.tool_calls)) {
+      for (const tc of s.tool_calls) {
+        const rawTc = JSON.stringify(tc);
+        if (rawTc.toLowerCase().includes(needle)) {
+          matchDetails.push({ field: `tool:${tc.name}`, text: rawTc });
+        }
+      }
+    }
+
+    if (matchDetails.length > 0) {
+      matches.push({ stepIndex: idx, step: s, details: matchDetails });
+    }
+  }
+
+  return matches;
+}
+
+function findLocalTranscripts(singleLatest = false) {
   const home = os.homedir();
   const searchDirs = [
     path.join(home, '.gemini', 'antigravity', 'brain'),
     path.join(home, '.gemini', 'antigravity-cli', 'brain'),
     path.join(home, '.gemini', 'antigravity-ide', 'brain'),
-    path.join(home, '.claude', 'projects')
+    path.join(home, '.claude', 'projects'),
+    path.join(home, '.codex', 'sessions')
   ];
 
-  let latestFile = null;
-  let latestMtime = 0;
+  const found = [];
 
   for (const dir of searchDirs) {
     if (!fs.existsSync(dir)) continue;
@@ -173,23 +225,81 @@ function findLocalTranscript() {
         const candidate = path.join(dir, entry.name, '.system_generated', 'logs', 'transcript.jsonl');
         if (fs.existsSync(candidate)) {
           const stats = fs.statSync(candidate);
-          if (stats.mtimeMs > latestMtime) {
-            latestMtime = stats.mtimeMs;
-            latestFile = candidate;
-          }
+          found.push({ path: candidate, mtime: stats.mtimeMs, size: stats.size });
         }
       }
-    } catch {
-      // Continue
-    }
+    } catch {}
   }
 
-  return latestFile;
+  found.sort((a, b) => b.mtime - a.mtime);
+  if (singleLatest) return found.length > 0 ? found[0].path : null;
+  return found.map(f => f.path);
 }
 
 // Execution Logic
 const remoteHost = getArg('--host');
 const filePath = getArg('--file');
+
+if (searchQuery) {
+  console.log(`\n============================================================`);
+  console.log(`🧲 METAL DETECTOR: Searching for "${searchQuery}" in Trajectories`);
+  console.log(`============================================================`);
+
+  let targets = [];
+  if (filePath) {
+    targets = [filePath];
+  } else if (searchAll) {
+    targets = findLocalTranscripts(false);
+  } else {
+    const latest = findLocalTranscripts(true);
+    if (latest) targets = [latest];
+  }
+
+  if (targets.length === 0) {
+    console.log(`❌ No transcripts found to search.`);
+    process.exit(1);
+  }
+
+  let totalMatches = 0;
+  for (const target of targets) {
+    if (!fs.existsSync(target)) continue;
+    try {
+      const raw = fs.readFileSync(target, 'utf8');
+      const lines = raw.split('\n');
+      const steps = parseTranscriptLines(lines);
+      const matches = searchInSteps(steps, searchQuery, target);
+
+      if (matches.length > 0) {
+        console.log(`\n📍 Session: ${target}`);
+        console.log(`   Matches Found: ${matches.length}`);
+
+        for (const m of matches) {
+          totalMatches++;
+          const time = m.step.created_at ? new Date(m.step.created_at).toLocaleTimeString() : 'N/A';
+          console.log(`   --------------------------------------------------------`);
+          console.log(`   ⏱️  Step #${m.stepIndex + 1} [${time}] (${m.step.source || 'AGENT'})`);
+          
+          for (const d of m.details) {
+            let snippet = d.text.replace(/\r?\n/g, ' ');
+            const matchPos = snippet.toLowerCase().indexOf(searchQuery.toLowerCase());
+            const start = Math.max(0, matchPos - 40);
+            const end = Math.min(snippet.length, matchPos + searchQuery.length + 60);
+            const excerpt = (start > 0 ? '...' : '') + snippet.slice(start, end) + (end < snippet.length ? '...' : '');
+
+            console.log(`      * [${d.field}]: "${excerpt}"`);
+          }
+        }
+      }
+    } catch (err) {
+      // Continue next target
+    }
+  }
+
+  console.log(`\n============================================================`);
+  console.log(`🎯 Summary: ${totalMatches} needle(s) found across ${targets.length} transcript(s).`);
+  console.log(`============================================================\n`);
+  process.exit(0);
+}
 
 if (remoteHost) {
   const remoteUser = getArg('--user', 'root');
@@ -227,7 +337,7 @@ if files:
 } else {
   let targetFile = filePath;
   if (!targetFile || hasFlag('--latest')) {
-    targetFile = findLocalTranscript();
+    targetFile = findLocalTranscripts(true);
   }
 
   if (!targetFile || !fs.existsSync(targetFile)) {
