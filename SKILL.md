@@ -1,14 +1,14 @@
 ---
 name: agent-log
-description: Like git log + a Metal Detector for AI coding agents. Inspects raw transcripts, unedited thinking tokens, silent command failures, and searches keywords across sessions and machines (Windows ↔ Linux VPS).
+description: Precision Trajectory Forensics & Silent Failure Detector for AI coding agents. Inspects raw transcripts, unedited thinking tokens, silent command failures, and searches keywords across sessions and machines (Windows ↔ Linux VPS).
 category: multi-agent
 tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governance, search, metal-detector]
 ---
 
 # 📜 `agent-log`
 
-> **Like `git log` + a Metal Detector, but for AI coding agents.**  
-> Never rely on an agent's self-reported success. Audit raw chronological trajectory logs (`transcript.jsonl`) across machines to catch silent failures, hallucinated tool outputs, unauthorized mutations, or find needles in gigabytes of log hay.
+> **The Trajectory Forensics & Silent Failure Engine for AI Coding Agents.**  
+> Never rely on an agent's self-reported success. Audit raw chronological trajectory logs (`transcript.jsonl`) across machines to catch silent failures, hallucinated tool outputs, unauthorized mutations, or find needles in gigabytes of raw execution records.
 
 ---
 
