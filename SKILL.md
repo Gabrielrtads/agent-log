@@ -8,7 +8,15 @@ tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governanc
 # 📜 `agent-log`
 
 > **The Trajectory Forensics & Silent Failure Engine for AI Coding Agents.**  
-> Never rely on an agent's self-reported success. Audit raw chronological trajectory logs (`transcript.jsonl`) across machines to catch silent failures, hallucinated tool outputs, unauthorized mutations, or find needles in gigabytes of raw execution records.
+> *(Like `git log`, but for unedited LLM thinking tokens, terminal tool calls, and cross-host execution audits).*
+
+---
+
+## 🩸 The Core Developer Pain It Solves
+- **Terminal Amnesia:** You closed the terminal tab and lost that 12-flag FFmpeg or Docker command the agent spent 40 minutes perfecting.
+- **Scrambled Multi-Turn Chats:** As conversations drag past 30 turns, the LLM hallucinates past steps, mixes up files, and forgets architectural rules.
+- **The `/compact` Context Trap:** Compacting sessions saves tokens but erases the exact API payloads, error traces, and CLI parameters needed to debug.
+- **The Polite Silent Failure:** The agent claims *"Deployed successfully!"* while deep in the shell a script died with `exit code: 1`.
 
 ---
 
@@ -16,17 +24,18 @@ tags: [agent-log, trajectory-forensics, multi-agent, cross-host, agent-governanc
 - Whenever the user mentions `/agent-log`, `agent-log`, `auditar agente`, `verificar logs`, `buscar no histórico`, `detector de metais`, `o que o agente fez?`, `qual foi o erro?`, or `procurar comando`.
 - When diagnosing an unexpected command failure, silent exit code != 0, or unhandled exception.
 - When an agent on one machine (e.g. Windows) needs out-of-band proof of what an agent on another machine (e.g. Linux VPS) executed.
-- When you need to retrieve past parameters, flags, or decisions without loading megabytes of logs into the active context window.
+- When you need to retrieve past parameters, flags, or architectural decisions without loading megabytes of logs into the active context window.
 
 ---
 
-## 🧭 Why `agent-log`?
+## 💡 6 Killer Use Cases
 
-When orchestrating autonomous agents across multiple nodes (e.g. Local Workstation ↔ Cloud VPS ↔ Edge device), conversational validation fails:
-
-- **The Silent Failure Trap:** An agent claims: *"Database migrated and service deployed successfully."* But underneath, the shell command exited with `code 1`, leaving production broken.
-- **The Needle in the Haystack:** Looking for that one FFmpeg flag or API response from 3 days ago among megabytes of raw `.jsonl` files.
-- **Context Window Protection:** Ingesting raw logs into the prompt causes memory bloat, high token costs, and reasoning degradation. `agent-log` runs outside the LLM at 0 token cost and returns only the physical proof.
+1. **Decision Archaeology:** Search `--search "keyword"` to read the agent's raw `thinking` tokens from days ago to understand *why* a hack or workaround was implemented.
+2. **Ephemeral Parameter Recovery:** Resurrect complex one-liners (FFmpeg codecs, OpenSSL flags, Prisma edge cases) in seconds.
+3. **Post-Mortem Root Cause Analysis:** Find out who modified a file, ran a dangerous `rm`, or triggered `exit code: 1` during a 3 AM crash.
+4. **Zero-Token Selective Decompaction:** Recover critical API outputs or error logs from past sessions without re-stuffing 50,000 tokens into the prompt.
+5. **Asynchronous Swarm Handoff:** Pass execution state from a day agent on Windows to a night agent on a Linux VPS via Tailscale SSH in 200 tokens.
+6. **Thinking Token Forensics:** Inspect whether the agent was genuinely confident or caught in an uncertain hallucination loop.
 
 ---
 
