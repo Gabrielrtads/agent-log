@@ -1,14 +1,25 @@
 ---
 name: agent-log
-description: The Time Machine & Lie Detector for Vibe-Coders. Searches past commands, catches AI silent failures, inspects secret thinking tokens, and untangles messy chats across sessions and machines.
+description: The Time Machine & Lie Detector for Vibe-Coders. Searches past commands (The Metal Detector), catches AI silent failures (The Glass in the Sink), inspects secret thinking tokens, and untangles messy chats across sessions and machines.
 category: multi-agent
-tags: [agent-log, vibe-coding, ai-agents, time-machine, lie-detector, search, zero-tokens]
+tags: [agent-log, vibe-coding, ai-agents, time-machine, lie-detector, search, zero-tokens, glass-in-the-sink, metal-detector]
 ---
 
 # 📜 `agent-log`
 
 > **The Time Machine & Lie Detector for Vibe-Coders.**  
 > Never guess what your AI actually did. Search through past commands, catch silent errors when the AI claims everything works, and find lost context from 3 days ago at $0 token cost.
+
+---
+
+## 🧲 The Two Golden Rules
+
+### 1. The Needle in the Haystack (The Metal Detector)
+> *"Your past AI chats are a giant haystack of messy text. What you actually need is the needle: that one magical command that worked. `agent-log` is your metal detector."*
+
+### 2. The Dirty Glass in the Sink (Physical Proof)
+> *"If a guest enters your house, drinks a glass of water, and leaves it in the sink, you don't ask them if they were thirsty. You just look at the sink."*  
+> Never ask the AI in the chat if it worked. Check the sink on your hard drive with `agent-log --latest`.
 
 ---
 
