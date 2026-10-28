@@ -1,7 +1,7 @@
 # 📜 agent-log
 
-> **Like `git log`, but for AI Coding Agents.**  
-> *The zero-token trajectory forensics tool and cross-agent hand-off protocol for Cursor, Claude Code, OpenAI Codex, and Google Antigravity.*
+> **Like `git log`, but for AI Agents.**  
+> *The zero-token trajectory forensics tool, context-reset engine, and cross-agent hand-off protocol for Claude Code, OpenAI Codex, Google Antigravity, Cursor, and beyond.*
 
 [![Vibe Coding Ready](https://img.shields.io/badge/Vibe_Coding-100%25_Friendly-ff007f?style=for-the-badge)](#)
 [![skills.sh compatible](https://img.shields.io/badge/skills.sh-agent--log-6366f1?style=for-the-badge)](https://skills.sh)
@@ -24,36 +24,72 @@ npm install -g agent-log
 
 When humans write software, we use **`git log`** to see what changed, who committed it, and why.
 
-When AI Agents code for you (Claude Code, Antigravity, Codex, Cursor), **they don't use Git for every intermediate step**. They run hidden terminal commands, inspect files, try shell hacks, and write private thoughts.
+When AI Agents work for you—whether **coding, scraping the web, editing video, automating workflows, or orchestrating servers**—they run hundreds of intermediate tool calls, execute shell commands, try hacks, and write private thinking tokens.
 
-When your chat runs out of tokens, crashes, or hits daily quota limits, **that entire reasoning trail is locked inside proprietary binary or JSON logs**.
+When your chat runs out of tokens, hits daily quota limits, or becomes slow and bloated, **that entire operational trail is trapped inside proprietary logs on your disk**.
 
-**`agent-log` breaks down those walled gardens.** It directly inspects the physical trajectory files (`transcript.jsonl`) on disk across all providers:
-1. **Zero-Token AI Hand-off:** One AI agent can inspect what another AI did and resume work instantly.
-2. **The AI Lie Detector:** Catches silent terminal crashes when the AI politely claims *"Everything is fixed! ✨"*.
-3. **The Shell Metal Detector:** Instantly finds that one 12-flag ffmpeg/docker command from 3 days ago.
+**`agent-log` breaks down those walled gardens.** It directly inspects raw trajectory journals (`transcript.jsonl`) across all providers:
+1. **The Tactical Chat Reset:** Clear bloated chats with the *same* model and restore 100% speed and IQ with 95% token savings.
+2. **Zero-Token Cross-Agent Hand-off:** Let Gemini, Claude, and Codex pass the baton to each other without re-explaining the project.
+3. **The AI Lie Detector:** Catches silent terminal and tool crashes when the AI politely claims *"Everything is done! ✨"*.
+4. **The Shell Metal Detector:** Instantly finds that one 12-flag ffmpeg/docker/curl command from 3 days ago.
 
 ---
 
-## 🔄 The Killer Feature: Seamless Cross-Agent Hand-off
+## 🧼 Superpower #1: The Tactical Chat Reset (Kill Context Bloat)
 
-Ever hit your daily quota on Claude Code, only to switch to Gemini or Codex and have to explain your entire project from scratch? **Never again.**
+You're 35 messages deep into a session with your favorite model. The conversation has accumulated 120,000 tokens of conversational baggage. The AI is now **slow, expensive, and suffering from attention degradation ("Lost in the Middle")**.
+
+You want to start fresh, but you're terrified of losing the context.
+
+**The Fix:**
+1. Hit `/clear` or open a fresh session with the **exact same model**.
+2. Type: `agent-log --latest`.
+3. The model inspects the physical disk and absorbs the essential state in **under 300 tokens** instead of 120,000.
+4. **You get 100% model IQ and lightning speed back, with zero context lost.**
+
+```mermaid
+graph LR
+    Bloat["😫 Bloated Chat (120k tokens)<br/>Slow, expensive, hallucinates"] 
+    -->|/clear + agent-log --latest| 
+    Fresh["⚡ Fresh Chat (300 tokens)<br/>Instant speed, 100% IQ, full context"]
+    
+    style Bloat fill:#7f1d1d,stroke:#ef4444,color:#fff
+    style Fresh fill:#064e3b,stroke:#10b981,color:#fff
+```
+
+---
+
+## 🔄 Superpower #2: Seamless Cross-Agent & Cross-Quota Hand-off
+
+Hit your quota limit on Claude Code? Switching from Google Antigravity to OpenAI Codex? Don't write long handoff documents or waste thousands of tokens summarizing history.
 
 ```mermaid
 sequenceDiagram
     actor You as 👤 You (Vibe-Coder)
-    participant A as 🔴 Agent 1 (Claude Code)
+    participant A as 🔴 Agent 1 (Claude / Gemini / Codex)
     participant Disk as 💾 Raw Trajectory Log (Disk)
-    participant B as 🔵 Agent 2 (Google Antigravity)
+    participant B as 🔵 Agent 2 (Next Model or New Account)
 
-    You->>A: "Fix authentication and deploy to staging"
-    A->>Disk: Edits 4 files, runs tests (Logged to transcript.jsonl)
-    Note over A: 🚨 Daily token limit reached!
+    You->>A: "Research competitors, build API endpoints, and deploy"
+    A->>Disk: Executes 42 tool calls, edits 6 files (Logged to transcript.jsonl)
+    Note over A: 🚨 Quota limit reached or session interrupted!
     You->>B: "Continue the task. Use agent-log --latest"
     B->>Disk: agent-log --latest (0 tokens spent!)
-    Disk-->>B: Exact summary of files modified, commands executed, and failures
-    B->>B: Resumes coding immediately with 100% context!
+    Disk-->>B: Exact physical telemetry: files mutated, commands run, failures caught
+    B->>B: Resumes execution immediately with 100% grounding!
 ```
+
+---
+
+## 🌍 Superpower #3: Not Just for Code (Universal Agent Forensics)
+
+Autonomous agents do far more than edit code. They automate your entire digital workflow:
+- 🎬 **Video & Media:** FFMPEG rendering, Remotion compositions, Whisper transcriptions, CapCut edits.
+- 📊 **Research & OSINT:** Web scraping, competitive intelligence, batch file downloads.
+- ⚙️ **Infrastructure & DevOps:** Docker containers, Caddy routes, Supabase migrations, n8n webhooks.
+
+Whenever an agent uses a tool, runs a script, or triggers an API, `agent-log` audits the raw execution sink. If a background render crashes or a webhook fails silently, you catch it in 1 second.
 
 ---
 
@@ -62,7 +98,7 @@ sequenceDiagram
 ### 1. The Dirty Glass in the Sink (Physical Proof)
 > *"If a guest enters your house, drinks water, and leaves the glass in the sink, you don't ask them if they were thirsty. You just look at the sink."*
 
-AI models are trained with RLHF to be polite and agreeable. They often say *"Server restarted successfully!"* even when the background process died with exit code 1. `agent-log` walks straight into the kitchen and inspects the physical disk.
+AI models are trained with RLHF to be polite and agreeable. They often say *"Server restarted successfully!"* even when the background process died with exit code 1. `agent-log` walks straight into the kitchen and inspects the physical sink on disk.
 
 ```mermaid
 sequenceDiagram
@@ -78,9 +114,9 @@ sequenceDiagram
 ```
 
 ### 2. The Metal Detector (Finding Needles in Haystacks)
-Stop scrolling through 1,000 lines of messy chat history looking for that one database migration script.
+Stop scrolling through 1,000 lines of messy chat history looking for that one video rendering flag or database connection string.
 ```bash
-agent-log --search "supabase migration" --all
+agent-log --search "ffmpeg" --all
 ```
 
 ---
@@ -89,7 +125,7 @@ agent-log --search "supabase migration" --all
 
 | Command | What it Does |
 |---|---|
-| `agent-log --latest` | Raio-X of the most recent agent session (files touched, failures, tools) |
+| `agent-log --latest` | Instant telemetry of the most recent session (tools used, files touched, failures) |
 | `agent-log --latest --verbose` | Unmasks raw unfiltered thinking tokens before the AI answered |
 | `agent-log --search "<query>" --all` | Scans all past sessions across Gemini, Claude, and Codex |
 | `agent-log --host <ip-address>` | Audits remote VPS sessions over SSH without logging in manually |
@@ -120,7 +156,7 @@ Use the output to understand recent file mutations and command outcomes before m
 <div align="center">
 
 ### ⭐ Did this save you from a vibe-coding headache?
-If `agent-log` helped you find a lost command or caught an AI bug, give it a star on GitHub!
+If `agent-log` helped you find a lost command, rescued context, or caught an AI bug, give it a star on GitHub!
 
 [![Star on GitHub](https://img.shields.io/github/stars/Gabrielrtads/agent-log?style=social)](https://github.com/Gabrielrtads/agent-log/stargazers)
 
