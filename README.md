@@ -121,14 +121,36 @@ agent-log --search "ffmpeg" --all
 
 ---
 
+## 🛬 Superpower #4: The VIP Cockpit Handover (`--recepcao` / `--welcome`)
+
+What if your agent didn't just log raw data, but prepared a **5-star VIP flight deck for the successor agent** before running out of quota or closing the session?
+
+When an agent reaches the end of its turn or quota limit, it runs:
+```bash
+agent-log --recepcao
+```
+
+In under 1 second, it generates a telegraphic, ~150-token markdown flight-deck (`CURRENT_TASK.md`) containing:
+- 🎯 **Active User Intent:** The real underlying goal (ignoring short conversational noise like "yes" or "ok").
+- 📂 **Session File Mutations:** Exact list of files created or edited.
+- 🧪 **Last Executed Validation:** The last test or build run with pass/fail telemetry.
+- ⚠️ **Silent Failures Caught:** Any hidden non-zero exit codes exposed.
+- 🚀 **Immediate Next Action:** The exact unblocked next step for the successor agent.
+
+When Agent 2 wakes up, it reads `CURRENT_TASK.md` in **under 150 tokens** and flies immediately—no searching, no guessing, zero token waste.
+
+---
+
 ## 🎮 Command Cheat Sheet
 
 | Command | What it Does |
 |---|---|
+| `agent-log --recepcao` | Generates the VIP Cockpit Handover briefing (`CURRENT_TASK.md`) for the next agent |
+| `agent-log --recepcao --out <path>` | Saves the handover briefing to a custom path (e.g. `./docs/HANDOFF.md`) |
 | `agent-log --latest` | Instant telemetry of the most recent session (tools used, files touched, failures) |
 | `agent-log --latest --verbose` | Unmasks raw unfiltered thinking tokens before the AI answered |
 | `agent-log --search "<query>" --all` | Scans all past sessions across Gemini, Claude, and Codex |
-| `agent-log --host <ip-address>` | Audits remote VPS sessions over SSH without logging in manually |
+| `agent-log --host <ip-address> --recepcao` | Audits remote VPS sessions over SSH and compiles a local handover cockpit |
 
 ---
 

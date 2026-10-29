@@ -14,6 +14,7 @@
  * 
  * Usage:
  *   node scripts/audit.mjs --latest
+ *   node scripts/audit.mjs --recepcao [--out CURRENT_TASK.md]
  *   node scripts/audit.mjs --search "ffmpeg"
  *   node scripts/audit.mjs --grep "prisma" --all
  *   node scripts/audit.mjs --file <path-to-transcript.jsonl>
@@ -23,7 +24,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 
 const args = process.argv.slice(2);
 
@@ -44,6 +45,8 @@ Usage:
 
 Core Options:
   --latest               Inspect the most recent local trajectory transcript.
+  --recepcao, --welcome  Generate a VIP Cockpit Handover briefing (CURRENT_TASK.md) for the next agent.
+  --out <path>           Output path for the handover briefing (default: ./CURRENT_TASK.md).
   --search, --grep <str> Search keyword across unedited thinking, tool arguments, and output (Metal Detector mode).
   --all                  In search mode, scan across all known local AI agent workspaces (Gemini, Claude, Codex).
   --file <path>          Path to a specific transcript.jsonl file.
@@ -55,9 +58,11 @@ Core Options:
 
 Examples:
   node scripts/audit.mjs --latest
+  node scripts/audit.mjs --recepcao
+  node scripts/audit.mjs --recepcao --out ./docs/HANDOFF.md
+  node scripts/audit.mjs --host 100.98.233.126 --recepcao
   node scripts/audit.mjs --search "asaas"
   node scripts/audit.mjs --grep "exit code 1" --all
-  node scripts/audit.mjs --host 100.98.233.126 --tail 15
 `);
 }
 
@@ -204,6 +209,157 @@ function searchInSteps(steps, query, sourceLabel) {
   return matches;
 }
 
+function generateRecepcaoDeLuxo(steps, outPath = './CURRENT_TASK.md', sourceLabel = 'Local') {
+  // 1. Extrair Objetivo Ativo do Usuário (com fallback para prompt substantivo se o último for curto)
+  const userPrompts = [];
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.source === 'USER_EXPLICIT' || (s.type === 'USER_INPUT' && s.source !== 'MODEL')) {
+      let content = typeof s.content === 'string' ? s.content : JSON.stringify(s.content || '');
+      const reqMatch = content.match(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/);
+      const text = reqMatch ? reqMatch[1].trim() : content.trim().replace(/^User:\s*/i, '');
+      if (text && !text.startsWith('Created At:') && !text.includes('diff_block_start')) {
+        userPrompts.push(text);
+      }
+    }
+  }
+
+  let userGoal = 'Dar continuidade à tarefa corrente.';
+  if (userPrompts.length > 0) {
+    const lastPrompt = userPrompts[userPrompts.length - 1];
+    if (lastPrompt.length <= 20 && userPrompts.length > 1) {
+      const priorPrompt = userPrompts[userPrompts.length - 2];
+      userGoal = `${priorPrompt} (Confirmado: "${lastPrompt}")`;
+    } else {
+      userGoal = lastPrompt;
+    }
+  }
+
+  // 2. Extrair Arquivos Mutados
+  const mutationTools = [
+    'write_file', 'write_to_file', 'edit_file', 'replace_file_content', 
+    'multi_replace_file_content', 'create_or_update_file', 'push_files', 'str_replace_editor'
+  ];
+  const mutatedFiles = new Set();
+  
+  // 3. Extrair Comandos Executados e Validações
+  const commandTools = ['run_command', 'execute_command', 'bash', 'exec', 'terminal'];
+  let lastCommand = null;
+  const silentFailures = [];
+
+  for (let idx = 0; idx < steps.length; idx++) {
+    const s = steps[idx];
+    if (s.tool_calls && Array.isArray(s.tool_calls)) {
+      for (const tc of s.tool_calls) {
+        const name = tc.name || '';
+        const tArgs = tc.args || tc.arguments || {};
+
+        if (mutationTools.includes(name)) {
+          let p = tArgs.TargetFile || tArgs.target_file || tArgs.file_path || tArgs.Path || tArgs.path || tArgs.filePath;
+          if (p && typeof p === 'string') {
+            p = p.replace(/^"|"$/g, '').replace(/\\"/g, '"');
+            mutatedFiles.add(p);
+          }
+        }
+
+        if (commandTools.includes(name)) {
+          let cmd = tArgs.CommandLine || tArgs.command || tArgs.cmd || '';
+          if (cmd && typeof cmd === 'string') {
+            cmd = cmd.replace(/^"|"$/g, '').replace(/\\"/g, '"');
+            // Ignorar comandos de auditoria interna para destacar o teste real
+            if (!cmd.includes('transcript.jsonl') && !cmd.includes('TEST_CURRENT_TASK')) {
+              lastCommand = { cmd, stepIndex: idx, status: s.status || 'DONE' };
+            }
+          }
+        }
+      }
+    }
+
+    // Verificar falhas silenciosas
+    if (s.status === 'ERROR') {
+      const errSnippet = typeof s.content === 'string' ? s.content.slice(0, 160) : 'Erro não especificado';
+      silentFailures.push(`Passo #${idx + 1}: ${errSnippet}`);
+    } else if (s.content && typeof s.content === 'string' && s.content.includes('Command exited with code') && !s.content.includes('code 0')) {
+      silentFailures.push(`Passo #${idx + 1}: ${s.content.slice(0, 160)}`);
+    }
+  }
+
+  // 4. Último Status do Agente / Próximo Passo
+  let nextStep = 'Prosseguir com a execução e validação da tarefa.';
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const s = steps[i];
+    if (s.thinking && typeof s.thinking === 'string') {
+      const thoughts = s.thinking.split('\n').map(l => l.trim()).filter(l => l.length > 15 && !l.startsWith('//') && !l.includes('diff_block'));
+      if (thoughts.length > 0) {
+        nextStep = thoughts[thoughts.length - 1].replace(/^[-*•\s]+/, '').slice(0, 220);
+        break;
+      }
+    } else if (s.content && typeof s.content === 'string' && s.source !== 'USER_EXPLICIT' && s.type !== 'USER_INPUT') {
+      const cleanContent = s.content.replace(/<[^>]+>/g, '').trim();
+      if (cleanContent.length > 20 && !cleanContent.includes('diff_block_start')) {
+        nextStep = cleanContent.slice(0, 220);
+        break;
+      }
+    }
+  }
+
+  // 5. Formatar Artefato Cockpit (~150-200 tokens)
+  const now = new Date().toISOString().replace('T', ' ').slice(0, 16);
+  const mutatedList = Array.from(mutatedFiles);
+  
+  let md = `# 🛬 RECEPÇÃO DE LUXO: HANDOFF COCKPIT\n`;
+  md += `> Gerado automaticamente por \`agent-log --recepcao\` em ${now} UTC.\n`;
+  md += `> Origem: **${sourceLabel}** | Total de passos analisados: **${steps.length}**\n\n`;
+
+  md += `### 🎯 Objetivo Ativo\n`;
+  md += `${userGoal}\n\n`;
+
+  md += `### 📂 Arquivos Modificados na Sessão\n`;
+  if (mutatedList.length === 0) {
+    md += `- *(Nenhum arquivo mutado até o momento)*\n\n`;
+  } else {
+    for (const f of mutatedList) {
+      md += `- \`${f}\`\n`;
+    }
+    md += `\n`;
+  }
+
+  md += `### 🧪 Última Validação Executada\n`;
+  if (lastCommand) {
+    const isOk = lastCommand.status !== 'ERROR';
+    md += `- **Comando:** \`${lastCommand.cmd}\`\n`;
+    md += `- **Status:** ${isOk ? '✅ Concluído' : '❌ Falha / Erro'}\n\n`;
+  } else {
+    md += `- *(Nenhum comando de validação executado recentemente)*\n\n`;
+  }
+
+  md += `### ⚠️ Pontos de Atenção / Falhas Ocultas\n`;
+  if (silentFailures.length === 0) {
+    md += `- ✅ Nenhuma falha silenciosa ou erro de comando detectado.\n\n`;
+  } else {
+    for (const sf of silentFailures.slice(-3)) {
+      md += `- ⚠️ ${sf.replace(/\r?\n/g, ' ')}\n`;
+    }
+    md += `\n`;
+  }
+
+  md += `### 🚀 Próximo Passo Recomendado\n`;
+  md += `${nextStep}\n`;
+
+  const resolvedOut = path.resolve(outPath);
+  fs.writeFileSync(resolvedOut, md, 'utf8');
+
+  console.log(`\n============================================================`);
+  console.log(`🛬 RECEPÇÃO DE LUXO: HANDOFF COCKPIT CRIADO COM SUCESSO!`);
+  console.log(`============================================================`);
+  console.log(`📁 Arquivo gerado: ${resolvedOut}`);
+  console.log(`📄 Resumo do Cockpit:\n`);
+  console.log(md);
+  console.log(`============================================================\n`);
+
+  return { path: resolvedOut, markdown: md };
+}
+
 function findLocalTranscripts(singleLatest = false) {
   const home = os.homedir();
   const searchDirs = [
@@ -211,7 +367,11 @@ function findLocalTranscripts(singleLatest = false) {
     path.join(home, '.gemini', 'antigravity-cli', 'brain'),
     path.join(home, '.gemini', 'antigravity-ide', 'brain'),
     path.join(home, '.claude', 'projects'),
-    path.join(home, '.codex', 'sessions')
+    path.join(home, '.codex', 'sessions'),
+    '/root/.gemini/antigravity-cli/brain',
+    '/var/lib/antigravity-drtoledo/.gemini/antigravity-cli/brain',
+    '/var/lib/antigravity-toledo/.gemini/antigravity-cli/brain',
+    '/var/lib/antigravity-barberflow/.gemini/antigravity-cli/brain'
   ];
 
   const found = [];
@@ -239,6 +399,8 @@ function findLocalTranscripts(singleLatest = false) {
 // Execution Logic
 const remoteHost = getArg('--host');
 const filePath = getArg('--file');
+const isRecepcao = hasFlag('--recepcao') || hasFlag('--welcome') || hasFlag('--cockpit');
+const recepcaoOut = getArg('--out', './CURRENT_TASK.md');
 
 if (searchQuery) {
   console.log(`\n============================================================`);
@@ -305,38 +467,31 @@ if (remoteHost) {
   const remoteUser = getArg('--user', 'root');
   console.log(`Connecting to remote host ${remoteUser}@${remoteHost} via SSH...`);
   
-  const remoteCmd = `python3 -c "
-import glob, os
-patterns = [
-  os.path.expanduser('~/.gemini/**/transcript.jsonl'),
-  '/var/lib/**/transcript.jsonl'
-]
-files = []
-for p in patterns:
-  files.extend(glob.glob(p, recursive=True))
-if files:
-  latest = max(files, key=os.path.getmtime)
-  with open(latest, 'r', encoding='utf-8', errors='ignore') as f:
-    lines = f.readlines()
-    for l in lines[-${tailCount + 10}:]:
-      print(l.strip())
-"`;
+  const lineLimit = isRecepcao ? 300 : (tailCount + 10);
+  const pyCode = `python3 -c "import glob, os; patterns=['/root/.gemini/antigravity*/**/transcript.jsonl', '/var/lib/antigravity*/**/transcript.jsonl']; files=[f for p in patterns for f in glob.glob(p, recursive=True)]; latest=max(files, key=os.path.getmtime) if files else None; lines=open(latest, 'r', errors='ignore').readlines()[-${lineLimit}:] if latest else []; print(''.join(lines), end='')"`;
 
-  try {
-    const output = execSync(`ssh -o StrictHostKeyChecking=no ${remoteUser}@${remoteHost} "${remoteCmd}"`, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-    const lines = output.split('\n');
-    const steps = parseTranscriptLines(lines);
-    renderReport(steps, `Remote (${remoteUser}@${remoteHost})`);
-  } catch (err) {
-    console.error(`❌ SSH Connection or Audit failed:`, err.message);
+  const proc = spawnSync('ssh', ['-n', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=no', `${remoteUser}@${remoteHost}`, pyCode], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 50 * 1024 * 1024
+  });
+
+  if (proc.status !== 0) {
+    console.error(`❌ SSH Connection or Audit failed:`, proc.stderr || `Exit code ${proc.status}`);
     process.exit(1);
+  }
+
+  const lines = proc.stdout.split('\n');
+  const steps = parseTranscriptLines(lines);
+
+  if (isRecepcao) {
+    generateRecepcaoDeLuxo(steps, recepcaoOut, `Remote (${remoteUser}@${remoteHost})`);
+  } else {
+    renderReport(steps, `Remote (${remoteUser}@${remoteHost})`);
   }
 } else {
   let targetFile = filePath;
-  if (!targetFile || hasFlag('--latest')) {
+  if (!targetFile || hasFlag('--latest') || isRecepcao) {
     targetFile = findLocalTranscripts(true);
   }
 
@@ -348,5 +503,11 @@ if files:
   const raw = fs.readFileSync(targetFile, 'utf8');
   const lines = raw.split('\n');
   const steps = parseTranscriptLines(lines);
-  renderReport(steps, `Local (${targetFile})`);
+
+  if (isRecepcao) {
+    generateRecepcaoDeLuxo(steps, recepcaoOut, `Local (${targetFile})`);
+  } else {
+    renderReport(steps, `Local (${targetFile})`);
+  }
 }
+
