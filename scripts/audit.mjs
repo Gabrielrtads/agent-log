@@ -24,7 +24,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execSync, spawnSync } from 'child_process';
+import { buildRemoteCommand, formatSshTarget, runSsh } from './ssh-remote.mjs';
 
 const args = process.argv.slice(2);
 
@@ -51,7 +51,7 @@ Core Options:
   --all                  In search mode, scan across all known local AI agent workspaces (Gemini, Claude, Codex).
   --file <path>          Path to a specific transcript.jsonl file.
   --host <ip/hostname>   Remote host to inspect via SSH.
-  --user <user>          SSH username (default: root).
+  --user <user>          SSH username (default: whatever ~/.ssh/config resolves for the host).
   --tail <num>           Number of steps to display (default: 10).
   --verbose              Display full thinking and output contents.
   --help                 Show this help message.
@@ -464,17 +464,22 @@ if (searchQuery) {
 }
 
 if (remoteHost) {
-  const remoteUser = getArg('--user', 'root');
-  console.log(`Connecting to remote host ${remoteUser}@${remoteHost} via SSH...`);
-  
-  const lineLimit = isRecepcao ? 300 : (tailCount + 10);
-  const pyCode = `python3 -c "import glob, os; patterns=['/root/.gemini/antigravity*/**/transcript.jsonl', '/var/lib/antigravity*/**/transcript.jsonl']; files=[f for p in patterns for f in glob.glob(p, recursive=True)]; latest=max(files, key=os.path.getmtime) if files else None; lines=open(latest, 'r', errors='ignore').readlines()[-${lineLimit}:] if latest else []; print(''.join(lines), end='')"`;
+  const remoteUser = getArg('--user');
 
-  const proc = spawnSync('ssh', ['-n', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=no', `${remoteUser}@${remoteHost}`, pyCode], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    maxBuffer: 50 * 1024 * 1024
-  });
+  // Validate before anything is echoed or spawned: --host/--user come straight from the command line.
+  let sshTarget, pyCode;
+  try {
+    sshTarget = formatSshTarget(remoteHost, remoteUser);
+    const lineLimit = isRecepcao ? 300 : (tailCount + 10);
+    pyCode = buildRemoteCommand(lineLimit);
+  } catch (err) {
+    console.error(`❌ ${err.message}`);
+    process.exit(1);
+  }
+
+  console.log(`Connecting to remote host ${sshTarget} via SSH...`);
+
+  const proc = runSsh(remoteHost, remoteUser, pyCode);
 
   if (proc.status !== 0) {
     console.error(`❌ SSH Connection or Audit failed:`, proc.stderr || `Exit code ${proc.status}`);
@@ -485,9 +490,9 @@ if (remoteHost) {
   const steps = parseTranscriptLines(lines);
 
   if (isRecepcao) {
-    generateRecepcaoDeLuxo(steps, recepcaoOut, `Remote (${remoteUser}@${remoteHost})`);
+    generateRecepcaoDeLuxo(steps, recepcaoOut, `Remote (${sshTarget})`);
   } else {
-    renderReport(steps, `Remote (${remoteUser}@${remoteHost})`);
+    renderReport(steps, `Remote (${sshTarget})`);
   }
 } else {
   let targetFile = filePath;
