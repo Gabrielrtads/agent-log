@@ -8,7 +8,8 @@
   },
   "scripts": {
     "log": "node scripts/audit.mjs --latest",
-    "test": "node scripts/audit.mjs --latest --tail 5"
+    "test": "node scripts/audit.mjs --latest --tail 5",
+    "test:unit": "node --test \"test/*.test.mjs\""
   },
   "keywords": [
     "agent-log",
